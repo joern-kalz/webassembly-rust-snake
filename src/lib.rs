@@ -27,7 +27,7 @@ fn start() -> Result<(), JsValue> {
     let f = Rc::new(RefCell::new(None));
     let g = f.clone();
 
-    let snake = vec![Point2D(5,1), Point2D(10,1), Point2D(10,20) ];
+    let snake = vec![Point2D(5, 1), Point2D(10, 1), Point2D(10, 20)];
     *g.borrow_mut() = Some(Closure::new(move || {
         let canvas = document().get_element_by_id("canvas").unwrap();
         let canvas: web_sys::HtmlCanvasElement = canvas
@@ -49,12 +49,11 @@ fn start() -> Result<(), JsValue> {
             let v1 = &snake[n];
 
             if v0.0 == v1.0 {
-                let x = 
-                context.set_fill_style(&JsValue::from_str("green"));
-                context.fill_rect(v0.0 as f64, v0.1 as f64,  2.0, (v1.1 - v0.1) as f64);
+                let x = context.set_fill_style(&JsValue::from_str("green"));
+                context.fill_rect(v0.0 as f64, v0.1 as f64, 2.0, (v1.1 - v0.1) as f64);
             } else {
                 context.set_fill_style(&JsValue::from_str("red"));
-                context.fill_rect(v0.0 as f64, v0.1 as f64,(v1.0 - v0.0) as f64, 2.0);
+                context.fill_rect(v0.0 as f64, v0.1 as f64, (v1.0 - v0.0) as f64, 2.0);
             }
         }
 
