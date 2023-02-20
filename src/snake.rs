@@ -27,7 +27,7 @@ impl Point2D {
         (Point2D {
             x: (new_x + BOARD_WIDTH) % BOARD_WIDTH,
             y: (new_y + BOARD_HEIGHT) % BOARD_HEIGHT,
-        }, new_x < BOARD_WIDTH && new_x >= 0 && new_y < BOARD_HEIGHT && new_y <= 0)
+        }, new_x >= BOARD_WIDTH || new_x < 0 || new_y >= BOARD_HEIGHT || new_y < 0)
     }
 }
 
@@ -117,7 +117,7 @@ impl Snake {
             } else {
                 self.segments.push_front(SnakeSegment {
                     direction: self.direction.opposite(),
-                    length: 1,
+                    length: if crossed_board { 0 } else { 1 },
                 });
             }
         }
@@ -145,16 +145,26 @@ impl Snake {
     }
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-//     #[test]
-//     fn snake_initial() {
-//         let snake = Snake::new();
+    #[test]
+    fn snake_across_border() {
+        let mut snake =  Snake {
+            start: Point2D{ x: 299, y: 10},
+            direction: Direction::XPositive,
+            segments: VecDeque::from([SnakeSegment {
+                direction: Direction::XNegative,
+                length: 20,
+            }]),
+        };
+        snake.move_forward();
+        snake.move_forward();
 
-//         assert_eq!(snake.segments(), vec![Point2D{x:5, y:5}, Point2D{ x:7, y:5}]);
-//     }
+        assert_eq!(snake.segments(), vec![]);
+    }
+}
 
 //     #[test]
 //     fn snake_move_() {
