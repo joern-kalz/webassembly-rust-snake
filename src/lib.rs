@@ -25,13 +25,15 @@ fn canvas() -> web_sys::HtmlCanvasElement {
 
 #[wasm_bindgen]
 pub struct Game {
+    width: i32,
+    height: i32,
     snake: Snake,
 }
 
 #[wasm_bindgen]
 impl Game {
-    pub fn new() -> Game {
-        Game { snake: Snake::new() }
+    pub fn new(width: i32, height: i32) -> Game {
+        Game { width, height, snake: Snake::new() }
     }
 
     pub fn tick(& mut self) {
@@ -52,16 +54,11 @@ impl Game {
 
         context.set_fill_style(&JsValue::from_str("green"));
 
-        let p = self.snake.segments();
-
-        for n in 1..(p.len()) {
-            let v0 = &p[n - 1];
-            let v1 = &p[n];
-
-            let x = cmp::min(v0.x, v1.x);
-            let y = cmp::min(v0.y, v1.y);
-            let w = cmp::max(i32::abs_diff(v0.x, v1.x), 2);
-            let h = cmp::max(i32::abs_diff(v0.y, v1.y), 2);
+        for segment in self.snake.segments() {
+            let x = cmp::min(segment.0.x, segment.1.x) - 2;
+            let y = cmp::min(segment.0.y, segment.1.y) - 2;
+            let w = cmp::max(i32::abs_diff(segment.0.x, segment.1.x), 5);
+            let h = cmp::max(i32::abs_diff(segment.0.y, segment.1.y), 5);
 
             context.set_fill_style(&JsValue::from_str("green"));
             context.fill_rect(x as f64, y as f64, w as f64, h as f64);
