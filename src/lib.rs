@@ -1,6 +1,6 @@
 use std::cmp;
 use wasm_bindgen::prelude::*;
-
+use std::f64;
 mod snake;
 use snake::Snake;
 
@@ -55,13 +55,20 @@ impl Game {
         context.set_fill_style(&JsValue::from_str("green"));
 
         for segment in self.snake.segments() {
-            let x = cmp::min(segment.0.x, segment.1.x) - 2;
-            let y = cmp::min(segment.0.y, segment.1.y) - 2;
-            let w = cmp::max(i32::abs_diff(segment.0.x, segment.1.x), 5);
-            let h = cmp::max(i32::abs_diff(segment.0.y, segment.1.y), 5);
+            let v0 = &segment.0;
+            let v1 = &segment.1;
+
+            let x = if v0.x != v1.x { cmp::min(v0.x, v1.x) } else { v0.x - 2 };
+            let y = if v0.y != v1.y { cmp::min(v0.y, v1.y) } else { v0.y - 2 };
+            let w = cmp::max(i32::abs_diff(v0.x, v1.x), 4);
+            let h = cmp::max(i32::abs_diff(v0.y, v1.y), 4);
 
             context.set_fill_style(&JsValue::from_str("green"));
             context.fill_rect(x as f64, y as f64, w as f64, h as f64);
+            context.begin_path();
+            context.arc(v0.x as f64, v0.y as f64, 2.0, 0.0, f64::consts::PI * 2.0).unwrap();
+            context.arc(v1.x as f64, v1.y as f64, 2.0, 0.0, f64::consts::PI * 2.0).unwrap();
+            context.fill();
         }
     }
 
