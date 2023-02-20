@@ -5,12 +5,29 @@
     <title>hello-wasm example</title>
   </head>
   <body>
-    <canvas id="canvas" width="300" height="300"></canvas>
+    <canvas id="canvas" width="800" height="800"></canvas>
     <script type="module">
-      import init, { start } from "./pkg/snake.js";
+      import init, { Game } from "./pkg/snake.js";
+
+      let game;
+
       init().then(() => {
-        start();
+        game = Game.new();
       });
+
+      document
+        .getElementById("canvas")
+        .addEventListener("click", () => game && game.turn());
+
+      function render() {
+        if (game) {
+          game.tick();
+          game.render();
+        }
+        requestAnimationFrame(render);
+      }
+
+      requestAnimationFrame(render);
     </script>
   </body>
 </html>

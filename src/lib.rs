@@ -1,18 +1,11 @@
-use std::cell::RefCell;
-use std::rc::Rc;
+use std::cmp;
 use wasm_bindgen::prelude::*;
 
 mod snake;
-use snake::Point2D;
+use snake::Snake;
 
 fn window() -> web_sys::Window {
     web_sys::window().expect("no global `window` exists")
-}
-
-fn request_animation_frame(f: &Closure<dyn FnMut()>) {
-    window()
-        .request_animation_frame(f.as_ref().unchecked_ref())
-        .expect("should register `requestAnimationFrame` OK");
 }
 
 fn document() -> web_sys::Document {
@@ -21,19 +14,32 @@ fn document() -> web_sys::Document {
         .expect("should have a document on window")
 }
 
-// This function is automatically invoked after the wasm module is instantiated.
-#[wasm_bindgen(start)]
-fn start() -> Result<(), JsValue> {
-    let f = Rc::new(RefCell::new(None));
-    let g = f.clone();
+fn canvas() -> web_sys::HtmlCanvasElement {
+    document()
+        .get_element_by_id("canvas")
+        .expect("should have an element with id 'canvas' in the document")
+        .dyn_into::<web_sys::HtmlCanvasElement>()
+        .map_err(|_| ())
+        .expect("canvas should be a HtmlCanvasElement")
+}
 
-    let snake = vec![Point2D(5, 1), Point2D(10, 1), Point2D(10, 20)];
-    *g.borrow_mut() = Some(Closure::new(move || {
-        let canvas = document().get_element_by_id("canvas").unwrap();
-        let canvas: web_sys::HtmlCanvasElement = canvas
-            .dyn_into::<web_sys::HtmlCanvasElement>()
-            .map_err(|_| ())
-            .unwrap();
+#[wasm_bindgen]
+pub struct Game {
+    snake: Snake,
+}
+
+#[wasm_bindgen]
+impl Game {
+    pub fn new() -> Game {
+        Game { snake: Snake::new() }
+    }
+
+    pub fn tick(& mut self) {
+        self.snake.move_forward();
+    }
+
+    pub fn render(&self) {
+        let canvas = canvas();
 
         let context = canvas
             .get_context("2d")
@@ -42,24 +48,27 @@ fn start() -> Result<(), JsValue> {
             .dyn_into::<web_sys::CanvasRenderingContext2d>()
             .unwrap();
 
+        context.clear_rect(0.0, 0.0, canvas.width() as f64, canvas.height() as f64);
+
         context.set_fill_style(&JsValue::from_str("green"));
 
-        for n in 1..(snake.len()) {
-            let v0 = &snake[n - 1];
-            let v1 = &snake[n];
+        let p = self.snake.segments();
 
-            if v0.0 == v1.0 {
-                let x = context.set_fill_style(&JsValue::from_str("green"));
-                context.fill_rect(v0.0 as f64, v0.1 as f64, 2.0, (v1.1 - v0.1) as f64);
-            } else {
-                context.set_fill_style(&JsValue::from_str("red"));
-                context.fill_rect(v0.0 as f64, v0.1 as f64, (v1.0 - v0.0) as f64, 2.0);
-            }
+        for n in 1..(p.len()) {
+            let v0 = &p[n - 1];
+            let v1 = &p[n];
+
+            let x = cmp::min(v0.x, v1.x);
+            let y = cmp::min(v0.y, v1.y);
+            let w = cmp::max(i32::abs_diff(v0.x, v1.x), 2);
+            let h = cmp::max(i32::abs_diff(v0.y, v1.y), 2);
+
+            context.set_fill_style(&JsValue::from_str("green"));
+            context.fill_rect(x as f64, y as f64, w as f64, h as f64);
         }
+    }
 
-        request_animation_frame(f.borrow().as_ref().unwrap());
-    }));
-
-    request_animation_frame(g.borrow().as_ref().unwrap());
-    Ok(())
+    pub fn turn(& mut self) {
+        self.snake.turn(snake::TurnDirection::Left)
+    }
 }

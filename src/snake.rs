@@ -1,6 +1,9 @@
 use std::collections::VecDeque;
 
-struct Snake {
+const BOARD_WIDTH: i32 = 300;
+const BOARD_HEIGHT: i32 = 300;
+
+pub struct Snake {
     start: Point2D,
     direction: Direction,
     segments: VecDeque<SnakeSegment>,
@@ -12,9 +15,23 @@ struct SnakeSegment {
 }
 
 #[derive(Clone, Debug, PartialEq, Copy)]
-struct Point2D(i32, i32);
+pub struct Point2D {
+    pub x: i32,
+    pub y: i32,
+}
+impl Point2D {
+    fn add_direction(&self, direction: &Direction, distance: i32) -> (Point2D, bool) {
+        let new_x = self.x + direction.x_offset() * distance;
+        let new_y = self.y + direction.y_offset() * distance;
 
-enum TurnDirection {
+        (Point2D {
+            x: (new_x + BOARD_WIDTH) % BOARD_WIDTH,
+            y: (new_y + BOARD_HEIGHT) % BOARD_HEIGHT,
+        }, new_x < BOARD_WIDTH && new_x >= 0 && new_y < BOARD_HEIGHT && new_y <= 0)
+    }
+}
+
+pub enum TurnDirection {
     Left,
     Right,
 }
@@ -76,11 +93,11 @@ impl Direction {
 impl Snake {
     pub fn new() -> Snake {
         Snake {
-            start: Point2D(5, 5),
+            start: Point2D{ x: 5, y: 5},
             direction: Direction::XNegative,
             segments: VecDeque::from([SnakeSegment {
                 direction: Direction::XPositive,
-                length: 2,
+                length: 20,
             }]),
         }
     }
@@ -93,11 +110,9 @@ impl Snake {
             }
         }
         if let Some(mut first) = self.segments.front_mut() {
-            self.start = Point2D(
-                self.start.0 + self.direction.x_offset(),
-                self.start.1 + self.direction.y_offset(),
-            );
-            if self.direction.opposite() == first.direction {
+            let (new_start, crossed_board) = self.start.add_direction(&self.direction, 1);
+            self.start = new_start;
+            if self.direction.opposite() == first.direction && !crossed_board {
                 first.length = first.length + 1;
             } else {
                 self.segments.push_front(SnakeSegment {
@@ -118,10 +133,7 @@ impl Snake {
 
         points.push(current);
         for segment in &self.segments {
-            current = Point2D(
-                current.0 + segment.direction.x_offset() * segment.length,
-                current.1 + segment.direction.y_offset() * segment.length,
-            );
+            current = current.add_direction(&segment.direction, segment.length).0;
             points.push(current);
         }
 
@@ -137,7 +149,7 @@ mod tests {
     fn snake_initial() {
         let snake = Snake::new();
 
-        assert_eq!(snake.segments(), vec![Point2D(5, 5), Point2D(7, 5)]);
+        assert_eq!(snake.segments(), vec![Point2D{x:5, y:5}, Point2D{ x:7, y:5}]);
     }
 
     #[test]
@@ -145,7 +157,7 @@ mod tests {
         let mut snake = Snake::new();
         snake.move_forward();
 
-        assert_eq!(snake.segments(), vec![Point2D(4, 5), Point2D(6, 5)]);
+        assert_eq!(snake.segments(), vec![Point2D{x: 4, y:5}, Point2D{ x:6,y: 5}]);
     }
 
     #[test]
@@ -154,7 +166,7 @@ mod tests {
         snake.move_forward();
         snake.move_forward();
 
-        assert_eq!(snake.segments(), vec![Point2D(3, 5), Point2D(5, 5)]);
+        assert_eq!(snake.segments(), vec![Point2D{x:3, y:5}, Point2D{x:5, y:5}]);
     }
 
     #[test]
@@ -166,7 +178,7 @@ mod tests {
         assert_eq!(snake.direction, Direction::YPositive);
         assert_eq!(
             snake.segments(),
-            vec![Point2D(5, 6), Point2D(5, 5), Point2D(6, 5)]
+            vec![Point2D{x:5, y:6}, Point2D{x:5, y:5}, Point2D{x:6, y:5}]
         );
     }
 
@@ -178,7 +190,7 @@ mod tests {
         snake.move_forward();
 
         assert_eq!(snake.direction, Direction::YPositive);
-        assert_eq!(snake.segments(), vec![Point2D(5, 7), Point2D(5, 5)]);
+        assert_eq!(snake.segments(), vec![Point2D{x:5, y:7}, Point2D{x:5, y:5}]);
     }
 
     #[test]
@@ -189,6 +201,6 @@ mod tests {
         snake.move_forward();
 
         assert_eq!(snake.direction, Direction::YNegative);
-        assert_eq!(snake.segments(), vec![Point2D(5, 3), Point2D(5, 5)]);
+        assert_eq!(snake.segments(), vec![Point2D{x:5, y:3}, Point2D{x:5, y:5}]);
     }
 }
