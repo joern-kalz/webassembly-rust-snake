@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8" />
+    <title>hello-wasm example</title>
+  </head>
+  <body>
+    <canvas id="canvas"></canvas>
+    <script type="module">
+      import init, { start } from "./pkg/snake.js";
+      init().then(() => {
+        start();
+      });
+    </script>
+  </body>
+</html>
