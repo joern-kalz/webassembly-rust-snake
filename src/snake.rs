@@ -1,5 +1,5 @@
-struct Snake {  
-    pub segments: Vec<Point2D>,
+struct Snake {
+    segments: Vec<Point2D>,
 }
 
 struct Point2D(i32, i32);
@@ -10,11 +10,11 @@ enum Direction {
 }
 
 impl Snake {
-    fn move_forward(& mut self) {
-      
-    }
+    fn move_forward(&mut self) {}
 
-    fn turn(& mut self, direction: Direction) {
+    fn turn(&mut self, direction: Direction) {}
 
+    fn segments(&self) -> Vec<Point2D> {
+        segments;
     }
 }
