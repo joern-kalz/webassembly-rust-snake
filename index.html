@@ -1,33 +1,39 @@
 <!DOCTYPE html>
 <html lang="en-US">
-  <head>
-    <meta charset="utf-8" />
-    <title>hello-wasm example</title>
-  </head>
-  <body>
-    <canvas id="canvas" width="800" height="800"></canvas>
-    <script type="module">
-      import init, { Game } from "./pkg/snake.js";
 
-      let game;
+<head>
+  <meta charset="utf-8" />
+  <title>hello-wasm example</title>
+</head>
 
-      init().then(() => {
-        game = Game.new(800, 800);
-      });
+<body>
+  <canvas id="canvas" width="800" height="800"></canvas>
+  <script type="module">
+    import init, { Game } from "./pkg/snake.js";
 
-      document
-        .getElementById("canvas")
-        .addEventListener("click", () => game && game.turn());
+    let game;
 
-      function render() {
-        if (game) {
-          game.tick();
-          game.render();
+    init().then(() => {
+      game = Game.new();
+    });
+
+    document
+      .getElementById("canvas")
+      .addEventListener("click", () => game && game.turn());
+
+    function render() {
+      if (game) {
+        if (game.tick()) {
+          alert("You lost");
+          return;
         }
-        requestAnimationFrame(render);
+        game.render();
       }
-
       requestAnimationFrame(render);
-    </script>
-  </body>
+    }
+
+    requestAnimationFrame(render);
+  </script>
+</body>
+
 </html>

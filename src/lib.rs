@@ -1,8 +1,8 @@
 use std::cmp;
-use wasm_bindgen::prelude::*;
 use std::f64;
+use wasm_bindgen::prelude::*;
 mod snake;
-use snake::Snake;
+use snake::{Point2D, Snake};
 
 fn window() -> web_sys::Window {
     web_sys::window().expect("no global `window` exists")
@@ -25,19 +25,19 @@ fn canvas() -> web_sys::HtmlCanvasElement {
 
 #[wasm_bindgen]
 pub struct Game {
-    width: i32,
-    height: i32,
     snake: Snake,
 }
 
 #[wasm_bindgen]
 impl Game {
-    pub fn new(width: i32, height: i32) -> Game {
-        Game { width, height, snake: Snake::new() }
+    pub fn new() -> Game {
+        Game {
+            snake: Snake::new(),
+        }
     }
 
-    pub fn tick(& mut self) {
-        self.snake.move_forward();
+    pub fn tick(&mut self) -> bool {
+        self.snake.move_forward()
     }
 
     pub fn render(&self) {
@@ -58,21 +58,43 @@ impl Game {
             let v0 = &segment.0;
             let v1 = &segment.1;
 
-            let x = if v0.x != v1.x { cmp::min(v0.x, v1.x) } else { v0.x - 2 };
-            let y = if v0.y != v1.y { cmp::min(v0.y, v1.y) } else { v0.y - 2 };
+            let x = if v0.x != v1.x {
+                cmp::min(v0.x, v1.x)
+            } else {
+                v0.x - 2
+            };
+            let y = if v0.y != v1.y {
+                cmp::min(v0.y, v1.y)
+            } else {
+                v0.y - 2
+            };
             let w = cmp::max(i32::abs_diff(v0.x, v1.x), 4);
             let h = cmp::max(i32::abs_diff(v0.y, v1.y), 4);
 
             context.set_fill_style(&JsValue::from_str("green"));
             context.fill_rect(x as f64, y as f64, w as f64, h as f64);
             context.begin_path();
-            context.arc(v0.x as f64, v0.y as f64, 2.0, 0.0, f64::consts::PI * 2.0).unwrap();
-            context.arc(v1.x as f64, v1.y as f64, 2.0, 0.0, f64::consts::PI * 2.0).unwrap();
+            context
+                .arc(v0.x as f64, v0.y as f64, 2.0, 0.0, f64::consts::PI * 2.0)
+                .unwrap();
+            context
+                .arc(v1.x as f64, v1.y as f64, 2.0, 0.0, f64::consts::PI * 2.0)
+                .unwrap();
+            context.set_fill_style(&JsValue::from_str("red"));
+            context
+                .arc(
+                    self.snake.food.x as f64,
+                    self.snake.food.y as f64,
+                    2.0,
+                    0.0,
+                    f64::consts::PI * 2.0,
+                )
+                .unwrap();
             context.fill();
         }
     }
 
-    pub fn turn(& mut self) {
+    pub fn turn(&mut self) {
         self.snake.turn(snake::TurnDirection::Left)
     }
 }

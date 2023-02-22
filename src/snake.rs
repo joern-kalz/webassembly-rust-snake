@@ -1,12 +1,15 @@
-use std::collections::VecDeque;
+use std::collections::{btree_map::Range, VecDeque};
 
-const BOARD_WIDTH: i32 = 300;
-const BOARD_HEIGHT: i32 = 300;
+use rand::Rng;
+
+const BOARD_WIDTH: i32 = 50;
+const BOARD_HEIGHT: i32 = 50;
 
 pub struct Snake {
     start: Point2D,
     direction: Direction,
     segments: VecDeque<SnakeSegment>,
+    pub food: Point2D,
 }
 
 struct SnakeSegment {
@@ -20,14 +23,17 @@ pub struct Point2D {
     pub y: i32,
 }
 impl Point2D {
-    fn add_direction(&self, direction: &Direction, distance: i32) -> (Point2D, bool) {
+    fn add_direction(&mut self, direction: &Direction, distance: i32) -> (Point2D, bool) {
         let new_x = self.x + direction.x_offset() * distance;
         let new_y = self.y + direction.y_offset() * distance;
 
-        (Point2D {
-            x: (new_x + BOARD_WIDTH) % BOARD_WIDTH,
-            y: (new_y + BOARD_HEIGHT) % BOARD_HEIGHT,
-        }, new_x >= BOARD_WIDTH || new_x < 0 || new_y >= BOARD_HEIGHT || new_y < 0)
+        (
+            Point2D {
+                x: (new_x + BOARD_WIDTH) % BOARD_WIDTH,
+                y: (new_y + BOARD_HEIGHT) % BOARD_HEIGHT,
+            },
+            new_x >= BOARD_WIDTH || new_x < 0 || new_y >= BOARD_HEIGHT || new_y < 0,
+        )
     }
 }
 
@@ -93,25 +99,21 @@ impl Direction {
 impl Snake {
     pub fn new() -> Snake {
         Snake {
-            start: Point2D{ x: 5, y: 5},
+            start: Point2D { x: 5, y: 5 },
             direction: Direction::XNegative,
             segments: VecDeque::from([SnakeSegment {
                 direction: Direction::XPositive,
-                length: 20,
+                length: 60,
             }]),
+            food: Point2D { x: 5, y: 5 },
         }
     }
 
-    pub fn move_forward(&mut self) {
-        if let Some(mut last) = self.segments.back_mut() {
-            last.length = last.length - 1;
-            if last.length == 0 {
-                self.segments.pop_back();
-            }
-        }
+    pub fn move_forward(&mut self) -> bool {
+        let (new_start, crossed_board) = self.start.add_direction(&self.direction, 1);
+        let game_end = self.touches(new_start);
+        self.start = new_start;
         if let Some(mut first) = self.segments.front_mut() {
-            let (new_start, crossed_board) = self.start.add_direction(&self.direction, 1);
-            self.start = new_start;
             if self.direction.opposite() == first.direction && !crossed_board {
                 first.length = first.length + 1;
             } else {
@@ -121,6 +123,16 @@ impl Snake {
                 });
             }
         }
+        if self.start.x == self.food.x && self.start.y == self.food.y {
+            self.generate_food();
+        } else if let Some(mut last) = self.segments.back_mut() {
+            last.length = last.length - 1;
+            if last.length == 0 {
+                self.segments.pop_back();
+            }
+        }
+
+        game_end
     }
 
     pub fn turn(&mut self, turn_direction: TurnDirection) {
@@ -143,6 +155,33 @@ impl Snake {
 
         points
     }
+
+    fn touches(&self, point: Point2D) -> bool {
+        for segment in &self.segments() {
+            if point.x >= i32::min(segment.0.x, segment.1.x)
+                && point.x <= i32::max(segment.0.x, segment.1.x)
+                && point.y >= i32::min(segment.0.y, segment.1.y)
+                && point.y <= i32::max(segment.0.y, segment.1.y)
+            {
+                return true;
+            }
+        }
+        false
+    }
+
+    fn generate_food(&mut self) {
+        loop {
+            let rand = rand::thread_rng().gen_range(0..(BOARD_HEIGHT * BOARD_WIDTH));
+            let point = Point2D {
+                x: rand / BOARD_WIDTH,
+                y: rand % BOARD_WIDTH,
+            };
+            if !self.touches(point) {
+                self.food = point;
+                break;
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -151,13 +190,14 @@ mod tests {
 
     #[test]
     fn snake_across_border() {
-        let mut snake =  Snake {
-            start: Point2D{ x: 299, y: 10},
+        let mut snake = Snake {
+            start: Point2D { x: 299, y: 10 },
             direction: Direction::XPositive,
             segments: VecDeque::from([SnakeSegment {
                 direction: Direction::XNegative,
                 length: 20,
             }]),
+            food: Point2D { x: 5, y: 5 },
         };
         snake.move_forward();
         snake.move_forward();
