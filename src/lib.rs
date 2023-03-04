@@ -1,22 +1,20 @@
+mod world;
+
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::Clamped;
 use web_sys::{CanvasRenderingContext2d, ImageData};
-
-const SCREEN_WIDTH: usize = 30;
-const SCREEN_HEIGHT: usize = 30;
-const BYTES_PER_PIXEL: usize = 4;
-const SCREEN_SIZE: usize = SCREEN_WIDTH * SCREEN_HEIGHT * BYTES_PER_PIXEL;
+use world::{World, SCREEN_HEIGHT, SCREEN_WIDTH};
 
 #[wasm_bindgen]
 pub struct Game {
-    screen: [u8; SCREEN_SIZE],
+    world: World,
 }
 
 #[wasm_bindgen]
 impl Game {
     pub fn new() -> Game {
         Game {
-            screen: [155; SCREEN_SIZE],
+            world: World::new(),
         }
     }
 
@@ -32,7 +30,7 @@ impl Game {
 
     pub fn render(&mut self, ctx: &CanvasRenderingContext2d) {
         let data = ImageData::new_with_u8_clamped_array_and_sh(
-            Clamped(&self.screen),
+            Clamped(&self.world.screen),
             SCREEN_WIDTH.try_into().unwrap(),
             SCREEN_HEIGHT.try_into().unwrap(),
         )
