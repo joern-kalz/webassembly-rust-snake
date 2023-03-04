@@ -1,23 +1,23 @@
 # webassembly-rust-snake
 
-## Run
+## Develop
 
 ### Prerequisites
 
 [Install Rust](https://www.rust-lang.org/tools/install)
 
-Install wasm-pack and devserver
+Install wasm-pack, devserver and cargo-watch
 
 ```bash
-cargo install wasm-pack devserver
+cargo install wasm-pack devserver cargo-watch
 ```
 
-### Build
+### Build interactively
 
-Build with
+Build interactively on each change
 
 ```bash
-wasm-pack build --target web
+cargo watch -- wasm-pack build --target web
 ```
 
 ### Serve
@@ -27,3 +27,11 @@ devserver
 ```
 
 Open [http://localhost:8080/](http://localhost:8080/) in your browser
+
+## Build
+
+Build with
+
+```bash
+wasm-pack build --target web
+```
