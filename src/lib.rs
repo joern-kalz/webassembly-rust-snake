@@ -1,100 +1,57 @@
-use std::cmp;
-use std::f64;
+mod world;
+
 use wasm_bindgen::prelude::*;
-mod snake;
-use snake::{Point2D, Snake};
+use wasm_bindgen::Clamped;
+use web_sys::{CanvasRenderingContext2d, ImageData};
+use world::World;
 
-fn window() -> web_sys::Window {
-    web_sys::window().expect("no global `window` exists")
-}
-
-fn document() -> web_sys::Document {
-    window()
-        .document()
-        .expect("should have a document on window")
-}
-
-fn canvas() -> web_sys::HtmlCanvasElement {
-    document()
-        .get_element_by_id("canvas")
-        .expect("should have an element with id 'canvas' in the document")
-        .dyn_into::<web_sys::HtmlCanvasElement>()
-        .map_err(|_| ())
-        .expect("canvas should be a HtmlCanvasElement")
-}
+const TICK_MILLISECONDS: u32 = 75;
 
 #[wasm_bindgen]
 pub struct Game {
-    snake: Snake,
+    world: World,
+    elapsed_milliseconds: u32,
 }
 
 #[wasm_bindgen]
 impl Game {
     pub fn new() -> Game {
         Game {
-            snake: Snake::new(),
+            world: World::new(),
+            elapsed_milliseconds: 0,
         }
     }
 
-    pub fn tick(&mut self) -> bool {
-        self.snake.move_forward()
+    pub fn width() -> u32 {
+        World::width()
     }
 
-    pub fn render(&self) {
-        let canvas = canvas();
+    pub fn height() -> u32 {
+        World::height()
+    }
 
-        let context = canvas
-            .get_context("2d")
-            .unwrap()
-            .unwrap()
-            .dyn_into::<web_sys::CanvasRenderingContext2d>()
-            .unwrap();
+    pub fn tick(&mut self, elapsed_milliseconds: u32) {
+        self.elapsed_milliseconds += elapsed_milliseconds;
 
-        context.clear_rect(0.0, 0.0, canvas.width() as f64, canvas.height() as f64);
-
-        context.set_fill_style(&JsValue::from_str("green"));
-
-        for segment in self.snake.segments() {
-            let v0 = &segment.0;
-            let v1 = &segment.1;
-
-            let x = if v0.x != v1.x {
-                cmp::min(v0.x, v1.x)
-            } else {
-                v0.x - 2
-            };
-            let y = if v0.y != v1.y {
-                cmp::min(v0.y, v1.y)
-            } else {
-                v0.y - 2
-            };
-            let w = cmp::max(i32::abs_diff(v0.x, v1.x), 4);
-            let h = cmp::max(i32::abs_diff(v0.y, v1.y), 4);
-
-            context.set_fill_style(&JsValue::from_str("green"));
-            context.fill_rect(x as f64, y as f64, w as f64, h as f64);
-            context.begin_path();
-            context
-                .arc(v0.x as f64, v0.y as f64, 2.0, 0.0, f64::consts::PI * 2.0)
-                .unwrap();
-            context
-                .arc(v1.x as f64, v1.y as f64, 2.0, 0.0, f64::consts::PI * 2.0)
-                .unwrap();
-            context.set_fill_style(&JsValue::from_str("red"));
-            context
-                .arc(
-                    self.snake.food.x as f64,
-                    self.snake.food.y as f64,
-                    2.0,
-                    0.0,
-                    f64::consts::PI * 2.0,
-                )
-                .unwrap();
-            context.fill();
+        if self.elapsed_milliseconds >= TICK_MILLISECONDS {
+            self.elapsed_milliseconds = 0;
+            self.world.tick();
         }
     }
 
-    pub fn turn(&mut self) {
-        self.snake.turn(snake::TurnDirection::Left)
+    pub fn render(&mut self, ctx: &CanvasRenderingContext2d) {
+        let data = ImageData::new_with_u8_clamped_array_and_sh(
+            Clamped(&self.world.screen),
+            Game::width(),
+            Game::height(),
+        )
+        .expect("should create ImageData from array");
+
+        ctx.put_image_data(&data, 0.0, 0.0)
+            .expect("should write array to context");
+    }
+
+    pub fn click(&mut self, x: i32, y: i32) {
+        self.world.click(x, y);
     }
 }

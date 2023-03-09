@@ -1,39 +1,15 @@
 <!DOCTYPE html>
 <html lang="en-US">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Snake</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
 
-<head>
-  <meta charset="utf-8" />
-  <title>hello-wasm example</title>
-</head>
-
-<body>
-  <canvas id="canvas" width="800" height="800"></canvas>
-  <script type="module">
-    import init, { Game } from "./pkg/snake.js";
-
-    let game;
-
-    init().then(() => {
-      game = Game.new();
-    });
-
-    document
-      .getElementById("canvas")
-      .addEventListener("click", () => game && game.turn());
-
-    function render() {
-      if (game) {
-        if (game.tick()) {
-          alert("You lost");
-          return;
-        }
-        game.render();
-      }
-      requestAnimationFrame(render);
-    }
-
-    requestAnimationFrame(render);
-  </script>
-</body>
-
+  <body>
+    <p>Click or tap to turn!</p>
+    <canvas id="canvas"></canvas>
+    <script type="module" src="index.js"></script>
+  </body>
 </html>
