@@ -69,11 +69,11 @@ impl World {
         if self.alive {
             let head = self.snake.back().expect(INVARIANT);
 
-            if self.direction.x != 0 {
-                self.direction = Vec2D::new(0, if y < head.y { -1 } else { 1 });
-            } else {
-                self.direction = Vec2D::new(if x < head.x { -1 } else { 1 }, 0);
-            }
+            self.direction = match self.direction.x {
+                0 => Vec2D::new(if x < head.x { -1 } else { 1 }, 0),
+                _ => Vec2D::new(0, if y < head.y { -1 } else { 1 }),
+            };
+
         } else {
             self.direction = Vec2D::new(1, 0);
             self.snake = VecDeque::new();
