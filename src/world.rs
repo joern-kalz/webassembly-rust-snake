@@ -3,13 +3,10 @@ mod coord;
 use self::coord::Coord;
 use rand::Rng;
 use std::collections::VecDeque;
-use std::iter;
-use std::ops::{Index, IndexMut};
 
 const BYTES_PER_PIXEL: u32 = 4;
 const START_LEN: i32 = 7;
-const START_Y: i32 = 30 as i32 / 2; // todo: this shouldn't be a const
-const INVARIANT: &str = "Snake length > 0";
+const INVARIANT: &str = "Snake length > 0"; //todo: this is strange :)
 
 pub struct World {
     pub screen: Screen,
@@ -71,14 +68,16 @@ impl World {
     }
 
     fn create_initial_snake(&mut self) {
+        let start_y = self.screen.height as i32 / 2;
         for x in 0..START_LEN {
-            self.screen.set_color_at(&(x, START_Y).into(), Color::Snake);
-            self.snake.push_back((x, START_Y).into());
+            self.screen.set_color_at(&(x, start_y).into(), Color::Snake);
+            self.snake.push_back((x, start_y).into());
         }
     }
 
     fn create_initial_food(&mut self) {
-        self.screen.set_color_at(&(START_LEN, START_Y - 2).into(), Color::Food);
+        let initial_food_y = self.screen.height as i32 / 2 -2;
+        self.screen.set_color_at(&(START_LEN, initial_food_y).into(), Color::Food);
     }
 
     fn get_new_head(&self) -> Coord {
@@ -222,6 +221,8 @@ impl From<&Rgb> for Color {
 
 #[cfg(test)]
 mod tests {
+    const START_Y: i32 = 15;
+
     use super::*;
 
     #[test]

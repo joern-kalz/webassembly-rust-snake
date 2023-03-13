@@ -4,7 +4,6 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::Clamped;
 use web_sys::{CanvasRenderingContext2d, ImageData};
 use world::World;
-use crate::world::Screen;
 
 const TICK_MILLISECONDS: u32 = 75;
 
