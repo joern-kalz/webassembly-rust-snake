@@ -168,11 +168,9 @@ impl Screen {
     }
 
     fn clear(&mut self) {
-        for x in 0..self.width as i32 {
-            for y in 0..self.height as i32 {
-                self.set_color_at(&(x, y).into(), CLEAR_COLOR);
-            }
-        }
+        self.iter_coords().for_each(|coord| {
+            self.set_color_at(&coord, CLEAR_COLOR);
+        });
     }
 
     fn set_color_at(&mut self, coord: &Coord, color: Color) {
@@ -189,12 +187,16 @@ impl Screen {
         *y as usize * self.width as usize + *x as usize * BYTES_PER_PIXEL as usize
     }
 
+    fn iter_coords(&self) -> impl Iterator<Item=Coord>{
+        let width = self.width;
+        let height = self.height;
+        (0..width as i32).flat_map(move |x|
+            (0..height as i32).map(move |y| (x, y).into()))
+    }
+
     fn iter_pixels(&self) -> impl Iterator<Item=(Color, Coord)> + '_{
-        (0..self.width as i32).flat_map(|x|
-            (0..self.height as i32).map(move |y| (x, y).into()))
-            .map(|coord: Coord| {
-                (self.get_color_at(&coord), coord)
-            })
+        self.iter_coords()
+            .map(|coord: Coord| (self.get_color_at(&coord), coord))
     }
 
 }
