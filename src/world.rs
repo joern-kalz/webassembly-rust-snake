@@ -31,7 +31,7 @@ impl World {
     pub fn new() -> World {
         let mut world = World {
             screen: [255u8; SCREEN_SIZE_IN_BYTES],
-            direction: Vec2D::new(1, 0),
+            direction: (1, 0).into(),
             snake: VecDeque::new(),
             alive: true,
         };
@@ -70,12 +70,12 @@ impl World {
             let head = self.snake.back().expect(INVARIANT);
 
             self.direction = match self.direction.x {
-                0 => Vec2D::new(if x < head.x { -1 } else { 1 }, 0),
-                _ => Vec2D::new(0, if y < head.y { -1 } else { 1 }),
-            };
+                0 => (if x < head.x { -1 } else { 1 }, 0),
+                _ => (0, if y < head.y { -1 } else { 1 }),
+            }.into();
 
         } else {
-            self.direction = Vec2D::new(1, 0);
+            self.direction = (1, 0).into();
             self.snake = VecDeque::new();
             self.alive = true;
             self.clear_screen();
@@ -95,7 +95,7 @@ impl World {
     fn create_initial_snake(&mut self) {
         for x in 0..START_LEN {
             self.set_pixel(x, START_Y, SNAKE_COLOR);
-            self.snake.push_back(Vec2D::new(x, START_Y));
+            self.snake.push_back((x, START_Y).into());
         }
     }
 
@@ -105,10 +105,9 @@ impl World {
 
     fn get_new_head(&self) -> Vec2D {
         let moved_head = *self.snake.back().expect(INVARIANT) + self.direction;
-        Vec2D::new(
-            (moved_head.x + SCREEN_WIDTH as i32) % SCREEN_WIDTH as i32,
-            (moved_head.y + SCREEN_HEIGHT as i32) % SCREEN_HEIGHT as i32,
-        )
+        let x = (moved_head.x + SCREEN_WIDTH as i32) % SCREEN_WIDTH as i32;
+        let y = (moved_head.y + SCREEN_HEIGHT as i32) % SCREEN_HEIGHT as i32;
+        (x, y).into()
     }
 
     fn extend_head_to(&mut self, new_head: &Vec2D) {

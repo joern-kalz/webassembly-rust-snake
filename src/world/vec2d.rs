@@ -23,9 +23,22 @@ impl Add<Vec2D> for Vec2D {
     }
 }
 
+impl From<(i32, i32)> for Vec2D {
+    fn from((x, y): (i32, i32)) -> Self {
+        Vec2D::new(x, y)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+
+    #[test]
+    fn tuple_into_vec2d() {
+        let a: Vec2D = (1, 10).into();
+        assert_eq!(a, Vec2D { x: 1, y: 10 });
+    }
 
     #[test]
     fn add() {
