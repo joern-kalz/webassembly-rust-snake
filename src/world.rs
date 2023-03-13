@@ -8,16 +8,39 @@ use std::ops::{Index, IndexMut};
 
 const BYTES_PER_PIXEL: u32 = 4;
 
-type Color = [u8; 3];
-pub const CLEAR_COLOR: Color = [0, 0, 0];
-pub const SNAKE_COLOR: Color = [0, 255, 0];
-pub const FOOD_COLOR: Color = [0, 0, 255];
-pub const FAIL_COLOR: Color = [255, 0, 0];
+type Rgb = [u8; 3];
+
+#[derive(Debug, Eq, PartialEq)]
+enum Color {
+    Background, Snake, Food, Fail
+}
+
+impl From<&Color> for Rgb {
+    fn from(color: &Color) -> Self {
+        match color {
+            Color::Background => [0;3],
+            Color::Snake => [0, 255, 0],
+            Color::Food => [0,0,255],
+            Color::Fail => [255, 0, 0]
+        }
+    }
+}
+
+impl From<&Rgb> for Color {
+    fn from(rgb: &Rgb) -> Self {
+        match rgb {
+             [0, 0, 0] => Color::Background,
+             [0, 255, 0] => Color::Snake,
+             [0,0,255] => Color::Food,
+             [255, 0, 0] => Color::Fail,
+            _ => panic!("unexpected rgb value")
+        }
+    }
+}
 
 const START_LEN: i32 = 7;
 const START_Y: i32 = 30 as i32 / 2; // todo: this shouldn't be a const
 const INVARIANT: &str = "Snake length > 0";
-
 
 pub struct World {
     pub screen: Screen,
@@ -52,8 +75,8 @@ impl World {
             self.extend_head_to(&new_head);
 
             match new_head_pixel {
-                FOOD_COLOR => self.create_food(),
-                SNAKE_COLOR => self.die(),
+                Color::Food => self.create_food(),
+                Color::Snake => self.die(),
                 _ => self.shorten_tail(),
             }
         }
@@ -80,13 +103,13 @@ impl World {
 
     fn create_initial_snake(&mut self) {
         for x in 0..START_LEN {
-            self.screen.set_color_at(&(x, START_Y).into(), SNAKE_COLOR);
+            self.screen.set_color_at(&(x, START_Y).into(), Color::Snake);
             self.snake.push_back((x, START_Y).into());
         }
     }
 
     fn create_initial_food(&mut self) {
-        self.screen.set_color_at(&(START_LEN, START_Y - 2).into(), FOOD_COLOR);
+        self.screen.set_color_at(&(START_LEN, START_Y - 2).into(), Color::Food);
     }
 
     fn get_new_head(&self) -> Coord {
@@ -99,13 +122,13 @@ impl World {
     }
 
     fn extend_head_to(&mut self, new_head: &Coord) {
-        self.screen.set_color_at(new_head, SNAKE_COLOR);
+        self.screen.set_color_at(new_head, Color::Snake);
         self.snake.push_back(*new_head);
     }
 
     fn shorten_tail(&mut self) {
         let tail = self.snake.pop_front().expect(INVARIANT);
-        self.screen.set_color_at(&tail, CLEAR_COLOR);
+        self.screen.set_color_at(&tail, Color::Background);
     }
 
     fn create_food(&mut self) {
@@ -116,7 +139,7 @@ impl World {
         // todo: this is less efficient than the previous solution ... there might be a better way, but still use coords instead of index
 
         let coord  = self.screen.iter_pixels()
-            .filter(|(color, _)| *color == CLEAR_COLOR)
+            .filter(|(color, _)| *color == Color::Background)
             .map(|(_, coord)| coord)
             .collect::<Vec<_>>().into_iter()
             .cycle()
@@ -124,7 +147,7 @@ impl World {
             .next()
             .expect("At least one pixel should be free.");
 
-        self.screen.set_color_at(&coord, FOOD_COLOR);
+        self.screen.set_color_at(&coord, Color::Food);
     }
 
     fn die(&mut self) {
@@ -133,21 +156,18 @@ impl World {
         let screen_height = self.screen.height;
 
         for x in 0..screen_width as i32 {
-            self.screen.set_color_at(&(x, 0).into(), FAIL_COLOR);
-            self.screen.set_color_at(&(x, screen_height as i32 - 1).into(), FAIL_COLOR);
+            self.screen.set_color_at(&(x, 0).into(), Color::Fail);
+            self.screen.set_color_at(&(x, screen_height as i32 - 1).into(), Color::Fail);
         }
 
         for y in 0..screen_height as i32 {
-            self.screen.set_color_at(&(0, y).into(), FAIL_COLOR);
-            self.screen.set_color_at(&(screen_width as i32 - 1, y).into(), FAIL_COLOR);
+            self.screen.set_color_at(&(0, y).into(), Color::Fail);
+            self.screen.set_color_at(&(screen_width as i32 - 1, y).into(), Color::Fail);
         }
     }
 
 
 }
-
-
-
 
 pub struct Screen {
     pub pixel_buffer: Vec<u8>,
@@ -169,18 +189,18 @@ impl Screen {
 
     fn clear(&mut self) {
         self.iter_coords().for_each(|coord| {
-            self.set_color_at(&coord, CLEAR_COLOR);
+            self.set_color_at(&coord, Color::Background);
         });
     }
 
     fn set_color_at(&mut self, coord: &Coord, color: Color) {
         let i = self.get_buffer_index_for(coord);
-        self.pixel_buffer[i..i + 3].copy_from_slice(&color);
+        self.pixel_buffer[i..i + 3].copy_from_slice(Rgb::from(&color).as_slice());
     }
 
     fn get_color_at(&self, coord: &Coord) -> Color {
         let i = self.get_buffer_index_for(coord);
-        [self.pixel_buffer[i], self.pixel_buffer[i + 1], self.pixel_buffer[i + 2]]
+        (&[self.pixel_buffer[i], self.pixel_buffer[i + 1], self.pixel_buffer[i + 2]]).into()
     }
 
     fn get_buffer_index_for(&self, Coord{x, y}: &Coord) -> usize {
@@ -210,8 +230,8 @@ mod tests {
     fn new() {
         let world = World::new(30, 30);
 
-        assert_eq!(world.screen.get_color_at(&(0, START_Y).into()), SNAKE_COLOR);
-        assert_eq!(world.screen.get_color_at(&(START_LEN, START_Y).into()), CLEAR_COLOR);
+        assert_eq!(world.screen.get_color_at(&(0, START_Y).into()), Color::Snake);
+        assert_eq!(world.screen.get_color_at(&(START_LEN, START_Y).into()), Color::Background);
     }
 
     #[test]
@@ -219,8 +239,8 @@ mod tests {
         let mut world = World::new(30, 30);
         world.tick();
 
-        assert_eq!(world.screen.get_color_at(&(0, START_Y).into()), CLEAR_COLOR);
-        assert_eq!(world.screen.get_color_at(&(START_LEN, START_Y).into()), SNAKE_COLOR);
+        assert_eq!(world.screen.get_color_at(&(0, START_Y).into()), Color::Background);
+        assert_eq!(world.screen.get_color_at(&(START_LEN, START_Y).into()), Color::Snake);
     }
 
     #[test]
@@ -229,9 +249,9 @@ mod tests {
         world.click(0, 0);
         world.tick();
 
-        assert_eq!(world.screen.get_color_at(&(0, START_Y).into()), CLEAR_COLOR);
-        assert_eq!(world.screen.get_color_at(&(START_LEN, START_Y).into()), CLEAR_COLOR);
-        assert_eq!(world.screen.get_color_at(&(START_LEN - 1, START_Y - 1).into()), SNAKE_COLOR);
+        assert_eq!(world.screen.get_color_at(&(0, START_Y).into()), Color::Background);
+        assert_eq!(world.screen.get_color_at(&(START_LEN, START_Y).into()), Color::Background);
+        assert_eq!(world.screen.get_color_at(&(START_LEN - 1, START_Y - 1).into()), Color::Snake);
     }
 
     #[test]
@@ -256,7 +276,7 @@ mod tests {
         world.click(0, world.screen.height as i32 - 1);
         world.tick();
 
-        assert_eq!(world.screen.get_color_at(&(0, 0).into()), FAIL_COLOR);
+        assert_eq!(world.screen.get_color_at(&(0, 0).into()), Color::Fail);
     }
 
     #[test]
@@ -270,7 +290,7 @@ mod tests {
         world.tick();
         world.tick();
 
-        assert_eq!(world.screen.get_color_at(&(2, START_Y).into()), SNAKE_COLOR);
+        assert_eq!(world.screen.get_color_at(&(2, START_Y).into()), Color::Snake);
     }
 
     #[test]
@@ -284,7 +304,7 @@ mod tests {
         world.tick();
         world.click(0, 0);
 
-        assert_eq!(world.screen.get_color_at(&(0, 0).into()), CLEAR_COLOR);
+        assert_eq!(world.screen.get_color_at(&(0, 0).into()), Color::Background);
     }
 
     #[test]
@@ -295,10 +315,10 @@ mod tests {
             world.tick();
         }
 
-        assert_eq!(world.screen.get_color_at(&(0, START_Y).into()), SNAKE_COLOR);
+        assert_eq!(world.screen.get_color_at(&(0, START_Y).into()), Color::Snake);
     }
 
     fn food_exists(world: &World) -> bool {
-        world.screen.iter_pixels().any(|(color, _)| color == FOOD_COLOR)
+        world.screen.iter_pixels().any(|(color, _)| color == Color::Food)
     }
 }
