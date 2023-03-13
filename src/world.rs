@@ -8,6 +8,10 @@ const BYTES_PER_PIXEL: u32 = 4;
 const START_LEN: i32 = 7;
 const INVARIANT: &str = "Snake length > 0"; //todo: this is strange :)
 
+// todo: i32, u32, usize are mixed and are being cast wildly, ... can be probably simplified
+// todo: Introduce proper error handling. (no panic-ing via expect, => instead: propagate errors presentation layer and show some kind of "oh oh ... error" message instead :) )
+// todo: the "presentation layer" in form of the screen pixels are also holding the "game state". maybe separate it? I'm not sure though
+
 pub struct World {
     pub screen: Screen,
     direction: Coord,
@@ -107,8 +111,8 @@ impl World {
         let pixel_count = self.screen.pixel_count as usize;
         let random_skip = rand::thread_rng().gen_range(0..pixel_count) as usize;
 
-        // todo: this will panic if a player fills the screen with the snake ... instead a "you are awesome" message should appear :)
-        // todo: this is less efficient than the previous solution ... there might be a better way, but still use coords instead of index
+        // todo: this will panic if a very good player fills the screen with the snake ... instead a "you are awesome" message should appear :)
+        // todo: this is less efficient than the previous solution ... there might be a better way (but still using coords instead of index)
 
         let coord  = self.screen.iter_pixels()
             .filter(|(color, _)| *color == Color::Background)
