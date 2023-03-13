@@ -44,6 +44,14 @@ impl Game {
             .expect("should write array to context");
     }
 
+    pub fn width(&self) -> u32 {
+        self.world.screen.width
+    }
+
+    pub fn height(&self) -> u32 {
+        self.world.screen.height
+    }
+
     pub fn click(&mut self, x: i32, y: i32) {
         self.world.click(x, y);
     }
