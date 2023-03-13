@@ -184,14 +184,14 @@ impl Screen {
     }
 
     fn get_buffer_index_for(&self, Coord{x, y}: &Coord) -> usize {
-        *y as usize * self.width as usize + *x as usize * BYTES_PER_PIXEL as usize
+        (*y as usize * self.width as usize + *x as usize) * BYTES_PER_PIXEL as usize
     }
 
     fn iter_coords(&self) -> impl Iterator<Item=Coord>{
         let width = self.width;
         let height = self.height;
-        (0..width as i32).flat_map(move |x|
-            (0..height as i32).map(move |y| (x, y).into()))
+        (0..height as i32).flat_map(move |y|
+            (0..width as i32).map(move |x| (x, y).into()))
     }
 
     fn iter_pixels(&self) -> impl Iterator<Item=(Color, Coord)> + '_{
