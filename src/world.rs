@@ -58,13 +58,17 @@ impl World {
             }.into();
 
         } else {
-            self.direction = (1, 0).into();
-            self.snake = VecDeque::new();
-            self.alive = true;
-            self.screen.clear();
-            self.create_initial_snake();
-            self.create_initial_food();
+            self.reset_game()
         }
+    }
+
+    fn reset_game(&mut self)  {
+        self.direction = (1, 0).into();
+        self.snake = VecDeque::new();
+        self.alive = true;
+        self.screen.clear();
+        self.create_initial_snake();
+        self.create_initial_food();
     }
 
     fn create_initial_snake(&mut self) {
