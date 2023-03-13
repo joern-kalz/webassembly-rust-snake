@@ -104,7 +104,7 @@ impl World {
     }
 
     fn get_new_head(&self) -> Vec2D {
-        let moved_head = self.snake.back().expect(INVARIANT).add(&self.direction);
+        let moved_head = *self.snake.back().expect(INVARIANT) + self.direction;
         Vec2D::new(
             (moved_head.x + SCREEN_WIDTH as i32) % SCREEN_WIDTH as i32,
             (moved_head.y + SCREEN_HEIGHT as i32) % SCREEN_HEIGHT as i32,
