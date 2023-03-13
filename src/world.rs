@@ -1,6 +1,6 @@
-mod vec2d;
+mod coord;
 
-use self::vec2d::Vec2D;
+use self::coord::Coord;
 use rand::Rng;
 use std::collections::VecDeque;
 
@@ -22,8 +22,8 @@ const INVARIANT: &str = "Snake length > 0";
 
 pub struct World {
     pub screen: [u8; SCREEN_SIZE_IN_BYTES],
-    direction: Vec2D,
-    snake: VecDeque<Vec2D>,
+    direction: Coord,
+    snake: VecDeque<Coord>,
     alive: bool,
 }
 
@@ -53,7 +53,7 @@ impl World {
     pub fn tick(&mut self) {
         if self.alive {
             let new_head = self.get_new_head();
-            let new_head_pixel = self.get_pixel_at_vec(&new_head);
+            let new_head_pixel = self.get_pixel_at_coord(&new_head);
 
             self.extend_head_to(&new_head);
 
@@ -103,21 +103,21 @@ impl World {
         self.set_pixel(START_LEN, START_Y - 2, FOOD_COLOR);
     }
 
-    fn get_new_head(&self) -> Vec2D {
+    fn get_new_head(&self) -> Coord {
         let moved_head = *self.snake.back().expect(INVARIANT) + self.direction;
         let x = (moved_head.x + SCREEN_WIDTH as i32) % SCREEN_WIDTH as i32;
         let y = (moved_head.y + SCREEN_HEIGHT as i32) % SCREEN_HEIGHT as i32;
         (x, y).into()
     }
 
-    fn extend_head_to(&mut self, new_head: &Vec2D) {
-        self.set_pixel_at_vec(new_head, SNAKE_COLOR);
+    fn extend_head_to(&mut self, new_head: &Coord) {
+        self.set_pixel_at_coord(new_head, SNAKE_COLOR);
         self.snake.push_back(*new_head);
     }
 
     fn shorten_tail(&mut self) {
         let tail = self.snake.pop_front().expect(INVARIANT);
-        self.set_pixel_at_vec(&tail, CLEAR_COLOR);
+        self.set_pixel_at_coord(&tail, CLEAR_COLOR);
     }
 
     fn create_food(&mut self) {
@@ -146,21 +146,21 @@ impl World {
         }
     }
 
-    fn set_pixel_at_vec(&mut self, vec2d: &Vec2D, color: Color) {
-        self.set_pixel(vec2d.x, vec2d.y, color);
+    fn set_pixel_at_coord(&mut self, coord: &Coord, color: Color) {
+        self.set_pixel(coord.x, coord.y, color);
     }
 
-    fn get_pixel_at_vec(&mut self, vec2d: &Vec2D) -> Color {
-        self.get_pixel(vec2d.x, vec2d.y)
+    fn get_pixel_at_coord(&mut self, coord: &Coord) -> Color {
+        self.get_pixel(coord.x, coord.y)
     }
 
     fn set_pixel(&mut self, x: i32, y: i32, color: Color) {
-        let i = World::get_index_at_vec(x, y);
+        let i = World::get_index_at_coord(x, y);
         self.set_pixel_at_index(i, color);
     }
 
     fn get_pixel(&self, x: i32, y: i32) -> Color {
-        let i = World::get_index_at_vec(x, y);
+        let i = World::get_index_at_coord(x, y);
         self.get_pixel_at_index(i)
     }
 
@@ -174,7 +174,7 @@ impl World {
         [self.screen[i], self.screen[i + 1], self.screen[i + 2]]
     }
 
-    fn get_index_at_vec(x: i32, y: i32) -> usize {
+    fn get_index_at_coord(x: i32, y: i32) -> usize {
         (y as usize * SCREEN_WIDTH) + x as usize
     }
 }
