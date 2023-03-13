@@ -3,13 +3,10 @@ mod coord;
 use self::coord::Coord;
 use rand::Rng;
 use std::collections::VecDeque;
-use std::ops::Index;
+use std::iter;
+use std::ops::{Index, IndexMut};
 
-pub const SCREEN_WIDTH: usize = 30;
-pub const SCREEN_HEIGHT: usize = 30;
-const SCREEN_SIZE_IN_PIXELS: usize = SCREEN_WIDTH * SCREEN_HEIGHT;
-const BYTES_PER_PIXEL: usize = 4;
-const SCREEN_SIZE_IN_BYTES: usize = SCREEN_SIZE_IN_PIXELS * BYTES_PER_PIXEL;
+const BYTES_PER_PIXEL: u32 = 4;
 
 type Color = [u8; 3];
 pub const CLEAR_COLOR: Color = [0, 0, 0];
@@ -18,7 +15,7 @@ pub const FOOD_COLOR: Color = [0, 0, 255];
 pub const FAIL_COLOR: Color = [255, 0, 0];
 
 const START_LEN: i32 = 7;
-const START_Y: i32 = SCREEN_HEIGHT as i32 / 2;
+const START_Y: i32 = 30 as i32 / 2; // todo: this shouldn't be a const
 const INVARIANT: &str = "Snake length > 0";
 
 
@@ -30,9 +27,10 @@ pub struct World {
 }
 
 impl World {
-    pub fn new() -> World {
+    pub fn new(width: u32, height: u32) -> World {
+
         let mut world = World {
-            screen: Screen::new(),
+            screen: Screen::new(width, height),
             direction: (1, 0).into(),
             snake: VecDeque::new(),
             alive: true,
@@ -49,7 +47,7 @@ impl World {
     pub fn tick(&mut self) {
         if self.alive {
             let new_head = self.get_new_head();
-            let new_head_pixel = self.screen.get_pixel_at_coord(&new_head);
+            let new_head_pixel = self.screen.get_color_at(&new_head);
 
             self.extend_head_to(&new_head);
 
@@ -82,55 +80,66 @@ impl World {
 
     fn create_initial_snake(&mut self) {
         for x in 0..START_LEN {
-            self.screen.set_pixel(x, START_Y, SNAKE_COLOR);
+            self.screen.set_color_at(&(x, START_Y).into(), SNAKE_COLOR);
             self.snake.push_back((x, START_Y).into());
         }
     }
 
     fn create_initial_food(&mut self) {
-        self.screen.set_pixel(START_LEN, START_Y - 2, FOOD_COLOR);
+        self.screen.set_color_at(&(START_LEN, START_Y - 2).into(), FOOD_COLOR);
     }
 
     fn get_new_head(&self) -> Coord {
+        let screen_width = self.screen.width;
+        let screen_height = self.screen.height;
         let moved_head = *self.snake.back().expect(INVARIANT) + self.direction;
-        let x = (moved_head.x + SCREEN_WIDTH as i32) % SCREEN_WIDTH as i32;
-        let y = (moved_head.y + SCREEN_HEIGHT as i32) % SCREEN_HEIGHT as i32;
+        let x = (moved_head.x + screen_width as i32) % screen_width as i32;
+        let y = (moved_head.y + screen_height as i32) % screen_height as i32;
         (x, y).into()
     }
 
     fn extend_head_to(&mut self, new_head: &Coord) {
-        self.screen.set_pixel_at_coord(new_head, SNAKE_COLOR);
+        self.screen.set_color_at(new_head, SNAKE_COLOR);
         self.snake.push_back(*new_head);
     }
 
     fn shorten_tail(&mut self) {
         let tail = self.snake.pop_front().expect(INVARIANT);
-        self.screen.set_pixel_at_coord(&tail, CLEAR_COLOR);
+        self.screen.set_color_at(&tail, CLEAR_COLOR);
     }
 
     fn create_food(&mut self) {
-        let start_index = rand::thread_rng().gen_range(0..SCREEN_SIZE_IN_PIXELS);
+        let pixel_count = self.screen.pixel_count as usize;
+        let random_skip = rand::thread_rng().gen_range(0..pixel_count) as usize;
 
-        for i in 0..SCREEN_SIZE_IN_PIXELS {
-            let index = (start_index + i) % SCREEN_SIZE_IN_PIXELS;
-            if self.screen.get_pixel_at_index(index) == CLEAR_COLOR {
-                self.screen.set_pixel_at_index(index, FOOD_COLOR);
-                return;
-            }
-        }
+        // todo: this will panic if a player fills the screen with the snake ... instead a "you are awesome" message should appear :)
+        // todo: this is less efficient than the previous solution ... there might be a better way, but still use coords instead of index
+
+        let coord  = self.screen.iter_pixels()
+            .filter(|(color, _)| *color == CLEAR_COLOR)
+            .map(|(_, coord)| coord)
+            .collect::<Vec<_>>().into_iter()
+            .cycle()
+            .skip(random_skip)
+            .next()
+            .expect("At least one pixel should be free.");
+
+        self.screen.set_color_at(&coord, FOOD_COLOR);
     }
 
     fn die(&mut self) {
         self.alive = false;
+        let screen_width = self.screen.width;
+        let screen_height = self.screen.height;
 
-        for x in 0..SCREEN_WIDTH as i32 {
-            self.screen.set_pixel(x, 0, FAIL_COLOR);
-            self.screen.set_pixel(x, SCREEN_HEIGHT as i32 - 1, FAIL_COLOR);
+        for x in 0..screen_width as i32 {
+            self.screen.set_color_at(&(x, 0).into(), FAIL_COLOR);
+            self.screen.set_color_at(&(x, screen_height as i32 - 1).into(), FAIL_COLOR);
         }
 
-        for y in 0..SCREEN_HEIGHT as i32 {
-            self.screen.set_pixel(0, y, FAIL_COLOR);
-            self.screen.set_pixel(SCREEN_WIDTH as i32 - 1, y, FAIL_COLOR);
+        for y in 0..screen_height as i32 {
+            self.screen.set_color_at(&(0, y).into(), FAIL_COLOR);
+            self.screen.set_color_at(&(screen_width as i32 - 1, y).into(), FAIL_COLOR);
         }
     }
 
@@ -141,64 +150,55 @@ impl World {
 
 
 pub struct Screen {
-    pub pixel_buffer: [u8; SCREEN_SIZE_IN_BYTES],
+    pub pixel_buffer: Vec<u8>,
+    pub pixel_count: u32,
+    pub width: u32,
+    pub height: u32,
 }
 
 impl Screen {
 
-    fn new() -> Self {
+    fn new(width: u32, height: u32) -> Self {
+        let pixel_count = width * height;
+        let screen_size_in_bytes = pixel_count * BYTES_PER_PIXEL;
         Self {
-            pixel_buffer: [255u8; SCREEN_SIZE_IN_BYTES]
+            pixel_count, width, height,
+            pixel_buffer: vec![255u8; screen_size_in_bytes as usize],
         }
-    }
-    pub fn width() -> u32 {
-        SCREEN_WIDTH as u32
-    }
-
-    pub fn height() -> u32 {
-        SCREEN_HEIGHT as u32
     }
 
     fn clear(&mut self) {
-        for x in 0..SCREEN_WIDTH as i32 {
-            for y in 0..SCREEN_HEIGHT as i32 {
-                self.set_pixel(x, y, CLEAR_COLOR);
+        for x in 0..self.width as i32 {
+            for y in 0..self.height as i32 {
+                self.set_color_at(&(x, y).into(), CLEAR_COLOR);
             }
         }
     }
 
-    fn set_pixel_at_coord(&mut self, coord: &Coord, color: Color) {
-        self.set_pixel(coord.x, coord.y, color);
-    }
-
-    fn get_pixel_at_coord(&mut self, coord: &Coord) -> Color {
-        self.get_pixel(coord.x, coord.y)
-    }
-
-    fn set_pixel(&mut self, x: i32, y: i32, color: Color) {
-        let i = Screen::get_index_at_coord(x, y);
-        self.set_pixel_at_index(i, color);
-    }
-
-    fn get_pixel(&self, x: i32, y: i32) -> Color {
-        let i = Screen::get_index_at_coord(x, y);
-        self.get_pixel_at_index(i)
-    }
-
-    fn set_pixel_at_index(&mut self, index: usize, color: Color) {
-        let i = index * BYTES_PER_PIXEL;
+    fn set_color_at(&mut self, coord: &Coord, color: Color) {
+        let i = self.get_buffer_index_for(coord);
         self.pixel_buffer[i..i + 3].copy_from_slice(&color);
     }
 
-    fn get_pixel_at_index(&self, index: usize) -> Color {
-        let i = index * BYTES_PER_PIXEL;
+    fn get_color_at(&self, coord: &Coord) -> Color {
+        let i = self.get_buffer_index_for(coord);
         [self.pixel_buffer[i], self.pixel_buffer[i + 1], self.pixel_buffer[i + 2]]
     }
 
-    fn get_index_at_coord(x: i32, y: i32) -> usize {
-        (y as usize * SCREEN_WIDTH) + x as usize
+    fn get_buffer_index_for(&self, Coord{x, y}: &Coord) -> usize {
+        *y as usize * self.width as usize + *x as usize * BYTES_PER_PIXEL as usize
     }
+
+    fn iter_pixels(&self) -> impl Iterator<Item=(Color, Coord)> + '_{
+        (0..self.width as i32).flat_map(|x|
+            (0..self.height as i32).map(move |y| (x, y).into()))
+            .map(|coord: Coord| {
+                (self.get_color_at(&coord), coord)
+            })
+    }
+
 }
+
 
 #[cfg(test)]
 mod tests {
@@ -206,35 +206,35 @@ mod tests {
 
     #[test]
     fn new() {
-        let world = World::new();
+        let world = World::new(30, 30);
 
-        assert_eq!(world.screen.get_pixel(0, START_Y), SNAKE_COLOR);
-        assert_eq!(world.screen.get_pixel(START_LEN, START_Y), CLEAR_COLOR);
+        assert_eq!(world.screen.get_color_at(&(0, START_Y).into()), SNAKE_COLOR);
+        assert_eq!(world.screen.get_color_at(&(START_LEN, START_Y).into()), CLEAR_COLOR);
     }
 
     #[test]
     fn crawl() {
-        let mut world = World::new();
+        let mut world = World::new(30, 30);
         world.tick();
 
-        assert_eq!(world.screen.get_pixel(0, START_Y), CLEAR_COLOR);
-        assert_eq!(world.screen.get_pixel(START_LEN, START_Y), SNAKE_COLOR);
+        assert_eq!(world.screen.get_color_at(&(0, START_Y).into()), CLEAR_COLOR);
+        assert_eq!(world.screen.get_color_at(&(START_LEN, START_Y).into()), SNAKE_COLOR);
     }
 
     #[test]
     fn turn() {
-        let mut world = World::new();
+        let mut world = World::new(30, 30);
         world.click(0, 0);
         world.tick();
 
-        assert_eq!(world.screen.get_pixel(0, START_Y), CLEAR_COLOR);
-        assert_eq!(world.screen.get_pixel(START_LEN, START_Y), CLEAR_COLOR);
-        assert_eq!(world.screen.get_pixel(START_LEN - 1, START_Y - 1), SNAKE_COLOR);
+        assert_eq!(world.screen.get_color_at(&(0, START_Y).into()), CLEAR_COLOR);
+        assert_eq!(world.screen.get_color_at(&(START_LEN, START_Y).into()), CLEAR_COLOR);
+        assert_eq!(world.screen.get_color_at(&(START_LEN - 1, START_Y - 1).into()), SNAKE_COLOR);
     }
 
     #[test]
     fn eat() {
-        let mut world = World::new();
+        let mut world = World::new(30, 30);
         world.tick();
         world.click(0, 0);
         world.tick();
@@ -246,64 +246,57 @@ mod tests {
 
     #[test]
     fn die() {
-        let mut world = World::new();
+        let mut world = World::new(30, 30);
         world.click(0, 0);
         world.tick();
         world.click(0, 0);
         world.tick();
-        world.click(0, SCREEN_HEIGHT as i32 - 1);
+        world.click(0, world.screen.height as i32 - 1);
         world.tick();
 
-        assert_eq!(world.screen.get_pixel(0, 0), FAIL_COLOR);
+        assert_eq!(world.screen.get_color_at(&(0, 0).into()), FAIL_COLOR);
     }
 
     #[test]
     fn stop() {
-        let mut world = World::new();
+        let mut world = World::new(30, 30);
         world.click(0, 0);
         world.tick();
         world.click(0, 0);
         world.tick();
-        world.click(0, SCREEN_HEIGHT as i32 - 1);
+        world.click(0, world.screen.height as i32 - 1);
         world.tick();
         world.tick();
 
-        assert_eq!(world.screen.get_pixel(2, START_Y), SNAKE_COLOR);
+        assert_eq!(world.screen.get_color_at(&(2, START_Y).into()), SNAKE_COLOR);
     }
 
     #[test]
     fn revive() {
-        let mut world = World::new();
+        let mut world = World::new(30, 30);
         world.click(0, 0);
         world.tick();
         world.click(0, 0);
         world.tick();
-        world.click(0, SCREEN_HEIGHT as i32 - 1);
+        world.click(0, world.screen.height as i32 - 1);
         world.tick();
         world.click(0, 0);
 
-        assert_eq!(world.screen.get_pixel(0, 0), CLEAR_COLOR);
+        assert_eq!(world.screen.get_color_at(&(0, 0).into()), CLEAR_COLOR);
     }
 
     #[test]
     fn wrap() {
-        let mut world = World::new();
+        let mut world = World::new(30, 30);
 
-        for _ in 0..SCREEN_WIDTH {
+        for _ in 0..world.screen.width {
             world.tick();
         }
 
-        assert_eq!(world.screen.get_pixel(0, START_Y), SNAKE_COLOR);
+        assert_eq!(world.screen.get_color_at(&(0, START_Y).into()), SNAKE_COLOR);
     }
 
     fn food_exists(world: &World) -> bool {
-        for i in 0..SCREEN_SIZE_IN_PIXELS {
-            if world.screen.get_pixel_at_index(i) == FOOD_COLOR {
-                println!("{i}");
-                return true;
-            }
-        }
-
-        false
+        world.screen.iter_pixels().any(|(color, _)| color == FOOD_COLOR)
     }
 }

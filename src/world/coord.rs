@@ -1,4 +1,5 @@
 use std::ops::Add;
+use crate::world::Color;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Coord {
