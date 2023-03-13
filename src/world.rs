@@ -3,6 +3,7 @@ mod coord;
 use self::coord::Coord;
 use rand::Rng;
 use std::collections::VecDeque;
+use std::ops::Index;
 
 pub const SCREEN_WIDTH: usize = 30;
 pub const SCREEN_HEIGHT: usize = 30;
@@ -20,8 +21,9 @@ const START_LEN: i32 = 7;
 const START_Y: i32 = SCREEN_HEIGHT as i32 / 2;
 const INVARIANT: &str = "Snake length > 0";
 
+
 pub struct World {
-    pub screen: [u8; SCREEN_SIZE_IN_BYTES],
+    pub screen: Screen,
     direction: Coord,
     snake: VecDeque<Coord>,
     alive: bool,
@@ -30,30 +32,24 @@ pub struct World {
 impl World {
     pub fn new() -> World {
         let mut world = World {
-            screen: [255u8; SCREEN_SIZE_IN_BYTES],
+            screen: Screen::new(),
             direction: (1, 0).into(),
             snake: VecDeque::new(),
             alive: true,
         };
 
-        world.clear_screen();
+        world.screen.clear();
         world.create_initial_snake();
         world.create_initial_food();
         world
     }
 
-    pub fn width() -> u32 {
-        SCREEN_WIDTH as u32
-    }
 
-    pub fn height() -> u32 {
-        SCREEN_HEIGHT as u32
-    }
 
     pub fn tick(&mut self) {
         if self.alive {
             let new_head = self.get_new_head();
-            let new_head_pixel = self.get_pixel_at_coord(&new_head);
+            let new_head_pixel = self.screen.get_pixel_at_coord(&new_head);
 
             self.extend_head_to(&new_head);
 
@@ -78,29 +74,21 @@ impl World {
             self.direction = (1, 0).into();
             self.snake = VecDeque::new();
             self.alive = true;
-            self.clear_screen();
+            self.screen.clear();
             self.create_initial_snake();
             self.create_initial_food();
         }
     }
 
-    fn clear_screen(&mut self) {
-        for x in 0..SCREEN_WIDTH as i32 {
-            for y in 0..SCREEN_HEIGHT as i32 {
-                self.set_pixel(x, y, CLEAR_COLOR);
-            }
-        }
-    }
-
     fn create_initial_snake(&mut self) {
         for x in 0..START_LEN {
-            self.set_pixel(x, START_Y, SNAKE_COLOR);
+            self.screen.set_pixel(x, START_Y, SNAKE_COLOR);
             self.snake.push_back((x, START_Y).into());
         }
     }
 
     fn create_initial_food(&mut self) {
-        self.set_pixel(START_LEN, START_Y - 2, FOOD_COLOR);
+        self.screen.set_pixel(START_LEN, START_Y - 2, FOOD_COLOR);
     }
 
     fn get_new_head(&self) -> Coord {
@@ -111,13 +99,13 @@ impl World {
     }
 
     fn extend_head_to(&mut self, new_head: &Coord) {
-        self.set_pixel_at_coord(new_head, SNAKE_COLOR);
+        self.screen.set_pixel_at_coord(new_head, SNAKE_COLOR);
         self.snake.push_back(*new_head);
     }
 
     fn shorten_tail(&mut self) {
         let tail = self.snake.pop_front().expect(INVARIANT);
-        self.set_pixel_at_coord(&tail, CLEAR_COLOR);
+        self.screen.set_pixel_at_coord(&tail, CLEAR_COLOR);
     }
 
     fn create_food(&mut self) {
@@ -125,8 +113,8 @@ impl World {
 
         for i in 0..SCREEN_SIZE_IN_PIXELS {
             let index = (start_index + i) % SCREEN_SIZE_IN_PIXELS;
-            if self.get_pixel_at_index(index) == CLEAR_COLOR {
-                self.set_pixel_at_index(index, FOOD_COLOR);
+            if self.screen.get_pixel_at_index(index) == CLEAR_COLOR {
+                self.screen.set_pixel_at_index(index, FOOD_COLOR);
                 return;
             }
         }
@@ -136,13 +124,46 @@ impl World {
         self.alive = false;
 
         for x in 0..SCREEN_WIDTH as i32 {
-            self.set_pixel(x, 0, FAIL_COLOR);
-            self.set_pixel(x, SCREEN_HEIGHT as i32 - 1, FAIL_COLOR);
+            self.screen.set_pixel(x, 0, FAIL_COLOR);
+            self.screen.set_pixel(x, SCREEN_HEIGHT as i32 - 1, FAIL_COLOR);
         }
 
         for y in 0..SCREEN_HEIGHT as i32 {
-            self.set_pixel(0, y, FAIL_COLOR);
-            self.set_pixel(SCREEN_WIDTH as i32 - 1, y, FAIL_COLOR);
+            self.screen.set_pixel(0, y, FAIL_COLOR);
+            self.screen.set_pixel(SCREEN_WIDTH as i32 - 1, y, FAIL_COLOR);
+        }
+    }
+
+
+}
+
+
+
+
+pub struct Screen {
+    pub pixel_buffer: [u8; SCREEN_SIZE_IN_BYTES],
+}
+
+impl Screen {
+
+    fn new() -> Self {
+        Self {
+            pixel_buffer: [255u8; SCREEN_SIZE_IN_BYTES]
+        }
+    }
+    pub fn width() -> u32 {
+        SCREEN_WIDTH as u32
+    }
+
+    pub fn height() -> u32 {
+        SCREEN_HEIGHT as u32
+    }
+
+    fn clear(&mut self) {
+        for x in 0..SCREEN_WIDTH as i32 {
+            for y in 0..SCREEN_HEIGHT as i32 {
+                self.set_pixel(x, y, CLEAR_COLOR);
+            }
         }
     }
 
@@ -155,23 +176,23 @@ impl World {
     }
 
     fn set_pixel(&mut self, x: i32, y: i32, color: Color) {
-        let i = World::get_index_at_coord(x, y);
+        let i = Screen::get_index_at_coord(x, y);
         self.set_pixel_at_index(i, color);
     }
 
     fn get_pixel(&self, x: i32, y: i32) -> Color {
-        let i = World::get_index_at_coord(x, y);
+        let i = Screen::get_index_at_coord(x, y);
         self.get_pixel_at_index(i)
     }
 
     fn set_pixel_at_index(&mut self, index: usize, color: Color) {
         let i = index * BYTES_PER_PIXEL;
-        self.screen[i..i + 3].copy_from_slice(&color);
+        self.pixel_buffer[i..i + 3].copy_from_slice(&color);
     }
 
     fn get_pixel_at_index(&self, index: usize) -> Color {
         let i = index * BYTES_PER_PIXEL;
-        [self.screen[i], self.screen[i + 1], self.screen[i + 2]]
+        [self.pixel_buffer[i], self.pixel_buffer[i + 1], self.pixel_buffer[i + 2]]
     }
 
     fn get_index_at_coord(x: i32, y: i32) -> usize {
@@ -187,8 +208,8 @@ mod tests {
     fn new() {
         let world = World::new();
 
-        assert_eq!(world.get_pixel(0, START_Y), SNAKE_COLOR);
-        assert_eq!(world.get_pixel(START_LEN, START_Y), CLEAR_COLOR);
+        assert_eq!(world.screen.get_pixel(0, START_Y), SNAKE_COLOR);
+        assert_eq!(world.screen.get_pixel(START_LEN, START_Y), CLEAR_COLOR);
     }
 
     #[test]
@@ -196,8 +217,8 @@ mod tests {
         let mut world = World::new();
         world.tick();
 
-        assert_eq!(world.get_pixel(0, START_Y), CLEAR_COLOR);
-        assert_eq!(world.get_pixel(START_LEN, START_Y), SNAKE_COLOR);
+        assert_eq!(world.screen.get_pixel(0, START_Y), CLEAR_COLOR);
+        assert_eq!(world.screen.get_pixel(START_LEN, START_Y), SNAKE_COLOR);
     }
 
     #[test]
@@ -206,9 +227,9 @@ mod tests {
         world.click(0, 0);
         world.tick();
 
-        assert_eq!(world.get_pixel(0, START_Y), CLEAR_COLOR);
-        assert_eq!(world.get_pixel(START_LEN, START_Y), CLEAR_COLOR);
-        assert_eq!(world.get_pixel(START_LEN - 1, START_Y - 1), SNAKE_COLOR);
+        assert_eq!(world.screen.get_pixel(0, START_Y), CLEAR_COLOR);
+        assert_eq!(world.screen.get_pixel(START_LEN, START_Y), CLEAR_COLOR);
+        assert_eq!(world.screen.get_pixel(START_LEN - 1, START_Y - 1), SNAKE_COLOR);
     }
 
     #[test]
@@ -233,7 +254,7 @@ mod tests {
         world.click(0, SCREEN_HEIGHT as i32 - 1);
         world.tick();
 
-        assert_eq!(world.get_pixel(0, 0), FAIL_COLOR);
+        assert_eq!(world.screen.get_pixel(0, 0), FAIL_COLOR);
     }
 
     #[test]
@@ -247,7 +268,7 @@ mod tests {
         world.tick();
         world.tick();
 
-        assert_eq!(world.get_pixel(2, START_Y), SNAKE_COLOR);
+        assert_eq!(world.screen.get_pixel(2, START_Y), SNAKE_COLOR);
     }
 
     #[test]
@@ -261,7 +282,7 @@ mod tests {
         world.tick();
         world.click(0, 0);
 
-        assert_eq!(world.get_pixel(0, 0), CLEAR_COLOR);
+        assert_eq!(world.screen.get_pixel(0, 0), CLEAR_COLOR);
     }
 
     #[test]
@@ -272,12 +293,12 @@ mod tests {
             world.tick();
         }
 
-        assert_eq!(world.get_pixel(0, START_Y), SNAKE_COLOR);
+        assert_eq!(world.screen.get_pixel(0, START_Y), SNAKE_COLOR);
     }
 
     fn food_exists(world: &World) -> bool {
         for i in 0..SCREEN_SIZE_IN_PIXELS {
-            if world.get_pixel_at_index(i) == FOOD_COLOR {
+            if world.screen.get_pixel_at_index(i) == FOOD_COLOR {
                 println!("{i}");
                 return true;
             }

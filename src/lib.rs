@@ -4,6 +4,7 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::Clamped;
 use web_sys::{CanvasRenderingContext2d, ImageData};
 use world::World;
+use crate::world::Screen;
 
 const TICK_MILLISECONDS: u32 = 75;
 
@@ -23,11 +24,11 @@ impl Game {
     }
 
     pub fn width() -> u32 {
-        World::width()
+        Screen::width()
     }
 
     pub fn height() -> u32 {
-        World::height()
+        Screen::height()
     }
 
     pub fn tick(&mut self, elapsed_milliseconds: u32) {
@@ -41,7 +42,7 @@ impl Game {
 
     pub fn render(&mut self, ctx: &CanvasRenderingContext2d) {
         let data = ImageData::new_with_u8_clamped_array_and_sh(
-            Clamped(&self.world.screen),
+            Clamped(&self.world.screen.pixel_buffer),
             Game::width(),
             Game::height(),
         )
