@@ -7,37 +7,6 @@ use std::iter;
 use std::ops::{Index, IndexMut};
 
 const BYTES_PER_PIXEL: u32 = 4;
-
-type Rgb = [u8; 3];
-
-#[derive(Debug, Eq, PartialEq)]
-enum Color {
-    Background, Snake, Food, Fail
-}
-
-impl From<&Color> for Rgb {
-    fn from(color: &Color) -> Self {
-        match color {
-            Color::Background => [0;3],
-            Color::Snake => [0, 255, 0],
-            Color::Food => [0,0,255],
-            Color::Fail => [255, 0, 0]
-        }
-    }
-}
-
-impl From<&Rgb> for Color {
-    fn from(rgb: &Rgb) -> Self {
-        match rgb {
-             [0, 0, 0] => Color::Background,
-             [0, 255, 0] => Color::Snake,
-             [0,0,255] => Color::Food,
-             [255, 0, 0] => Color::Fail,
-            _ => panic!("unexpected rgb value")
-        }
-    }
-}
-
 const START_LEN: i32 = 7;
 const START_Y: i32 = 30 as i32 / 2; // todo: this shouldn't be a const
 const INVARIANT: &str = "Snake length > 0";
@@ -221,6 +190,35 @@ impl Screen {
 
 }
 
+type Rgb = [u8; 3];
+
+#[derive(Debug, Eq, PartialEq)]
+enum Color {
+    Background, Snake, Food, Fail
+}
+
+impl From<&Color> for Rgb {
+    fn from(color: &Color) -> Self {
+        match color {
+            Color::Background => [0;3],
+            Color::Snake => [0, 255, 0],
+            Color::Food => [0,0,255],
+            Color::Fail => [255, 0, 0]
+        }
+    }
+}
+
+impl From<&Rgb> for Color {
+    fn from(rgb: &Rgb) -> Self {
+        match rgb {
+            [0, 0, 0] => Color::Background,
+            [0, 255, 0] => Color::Snake,
+            [0,0,255] => Color::Food,
+            [255, 0, 0] => Color::Fail,
+            _ => panic!("unexpected rgb value")
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {
