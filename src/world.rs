@@ -121,18 +121,7 @@ impl World {
 
     fn die(&mut self) {
         self.alive = false;
-        let screen_width = self.screen.width;
-        let screen_height = self.screen.height;
-
-        for x in 0..screen_width as i32 {
-            self.screen.set_color_at(&(x, 0).into(), Color::Fail);
-            self.screen.set_color_at(&(x, screen_height as i32 - 1).into(), Color::Fail);
-        }
-
-        for y in 0..screen_height as i32 {
-            self.screen.set_color_at(&(0, y).into(), Color::Fail);
-            self.screen.set_color_at(&(screen_width as i32 - 1, y).into(), Color::Fail);
-        }
+        self.screen.set_color_at_edges(Color::Fail);
     }
 
 
@@ -167,6 +156,17 @@ impl Screen {
         self.pixel_buffer[i..i + 3].copy_from_slice(Rgb::from(&color).as_slice());
     }
 
+    fn set_color_at_edges(&mut self, color: Color) {
+        let screen_width = self.width as i32;
+        let screen_height = self.height as i32;
+
+        self.iter_coords()
+            .filter(|Coord { x, y }|
+                *x == 0 || *y == 0 || *x == screen_width - 1 || *y == screen_height - 1
+            )
+            .for_each(move |coord| self.set_color_at(&coord, color));
+    }
+
     fn get_color_at(&self, coord: &Coord) -> Color {
         let i = self.get_buffer_index_for(coord);
         (&[self.pixel_buffer[i], self.pixel_buffer[i + 1], self.pixel_buffer[i + 2]]).into()
@@ -192,7 +192,7 @@ impl Screen {
 
 type Rgb = [u8; 3];
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
 enum Color {
     Background, Snake, Food, Fail
 }
