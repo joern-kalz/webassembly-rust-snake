@@ -17,17 +17,9 @@ pub struct Game {
 impl Game {
     pub fn new() -> Game {
         Game {
-            world: World::new(),
+            world: World::new(30, 30),
             elapsed_milliseconds: 0,
         }
-    }
-
-    pub fn width() -> u32 {
-        World::width()
-    }
-
-    pub fn height() -> u32 {
-        World::height()
     }
 
     pub fn tick(&mut self, elapsed_milliseconds: u32) {
@@ -41,14 +33,22 @@ impl Game {
 
     pub fn render(&mut self, ctx: &CanvasRenderingContext2d) {
         let data = ImageData::new_with_u8_clamped_array_and_sh(
-            Clamped(&self.world.screen),
-            Game::width(),
-            Game::height(),
+            Clamped(&self.world.screen.pixel_buffer),
+            self.world.screen.width,
+            self.world.screen.height,
         )
         .expect("should create ImageData from array");
 
         ctx.put_image_data(&data, 0.0, 0.0)
             .expect("should write array to context");
+    }
+
+    pub fn width(&self) -> u32 {
+        self.world.screen.width
+    }
+
+    pub fn height(&self) -> u32 {
+        self.world.screen.height
     }
 
     pub fn click(&mut self, x: i32, y: i32) {

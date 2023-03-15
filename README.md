@@ -12,6 +12,14 @@ Install wasm-pack, devserver and cargo-watch
 cargo install wasm-pack devserver cargo-watch
 ```
 
+If installing the devserver fails because of missing ssl library dependencies, you need to first install `libssl-dev`
+libraries to your system. On Ubuntu, the command would be
+
+```bash
+ sudo apt-get install libssl-dev
+```
+
+
 ### Build interactively
 
 Build interactively on each change
